@@ -1,0 +1,12 @@
+{
+    "name": "emcor/crypt",
+    "authors": [
+        {
+            "name": "Carlos R. Zúñiga",
+            "email": "carlosrozuma@gmail.com"
+        }
+    ],
+    "require": {
+        "paragonie/sodium_compat": "^1.6"
+    }
+}
