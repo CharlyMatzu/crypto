@@ -3,6 +3,7 @@
     <words>
       <w>ciphertext</w>
       <w>encryptor</w>
+      <w>genkeys</w>
     </words>
   </dictionary>
 </component>
