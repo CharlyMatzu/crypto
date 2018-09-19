@@ -3,72 +3,104 @@
 require_once "Sodium.php";
 error_reporting( E_ERROR );
 
-
-//$message = "Hola soy un mensaje muy loco";
-//try {
-//    $cipher = $crypt->encrypt($message);
-//    echo "Cipher: " . $cipher;
-//    echo "<br>\r\n";
-//    echo "Plain: " . $crypt->decrypt($cipher);
-//} catch (Exception $e) {
-//    echo $e->getMessage();
-//}
-
-//echo $crypt->generateKeypair();
-//echo "<br><br>";
-//
-//echo $res = $crypt->encrypt("HOLA COMO ESTAS");
-//echo "<br><br>";
-//
-//echo $crypt->decrypt($res);
-//echo "<br><br>";
-
-
+//PARAMS
 $action = $argv[1];
-$user   = $argv[2];
+$client   = $argv[2];
 $secret = $argv[3];
+
 
 if( empty($action) )
     echo "Action Empty";
 
-
+// Dentitions
 try{
-    $crypt = new Sodium();
+    switch( $action ){
+        case 'gen_access': generateNewAccess(); break;
+        case 'new_access': newAccess( $client, $secret ); break;
+        //TODO: use a specific key/creds files
+        case 'validate': validate( $client, $secret ); break;
+        case 'read': readCreds(); break;
 
-    //when a new keys are crated are required new access credentials too
-    if( $action === 'genkeys' ){
-        echo $crypt->generateKeypair();
+
+        default: 
+                echo "$action is an invalid action\r\n";
+                printHelp();
+            break;
     }
-
-    //New keys generation
-    else if( $action === 'new_access' ){
-        if( empty($user) )
-            echo "User Empty";
-        if( empty($secret) )
-            echo "Secret Empty";
-
-        $crypt->newLogin($user, $secret);
-        echo "Access credentials changed";
-    }
-
-    //User decrypt validation
-    else if( $action === 'validate' ){
-        if( empty($user) )
-            echo "User Empty";
-        if( empty($secret) )
-            echo "Secret Empty";
-
-
-        if( $crypt->validate( $user, $secret ) )
-            echo "Success";
-        else
-            echo "Fail";
-    }
-    else
-        echo "$action is an invalid action";
 
 } catch (Exception $e) {
     echo "Error: ".$e->getMessage();
 }
 
 
+/**
+ * Generate a new access credentials automatically with keys
+ *
+ * @return void
+ * @throws Exception
+ */
+function generateNewAccess(){
+    $crypt = new Sodium();
+    $crypt->generateCreds();
+}
+
+/**
+ * Make a new access credentials using a specific client and secret
+ *
+ * @param String $client client
+ * @param String $secret like password
+ * @return void
+ * @throws Exception
+ */
+function newAccess( $client, $secret ){
+    if( empty($client) || empty($secret) )
+        throw new Exception("<client> or <secret> empty");
+
+    $crypt = new Sodium();
+    $crypt->newAccess( $client, $secret );
+    echo "New Access and keys created";
+}
+
+/**
+ * @param $client
+ * @param $secret
+ * @throws Exception
+ */
+function validate( $client, $secret ){
+    if( empty($client) || empty($secret) )
+        throw new Exception("<client> or <secret> empty");
+
+    $crypt = new Sodium();
+    $bool = $crypt->validate( $client, $secret );
+    if( $bool )
+        echo "Validation success";
+    else
+        echo "Validation Failed. <client> or <secret> invalid";
+}
+
+/**
+ * @throws Exception
+ */
+function readCreds(){
+    try{
+        $crypt = new Sodium();
+        echo $crypt->getCreds();
+    } catch (Exception $e) {
+        echo "Error: ". $e->getMessage();
+    }
+}
+
+
+function logger($message){
+    $log_name = date("Y-m-d" );
+    file_put_contents("logs/$log_name.log", print_r($message)."\r\n", FILE_APPEND);
+}
+
+
+function printHelp(){
+    echo "<action> value can be:\r\n";
+    echo "\tgen_access: generate new credentials automatically\r\n";
+    echo "\tnew_access: establish new credentials using specific access data. This action requires <client> and <secret> params.\r\n";
+    echo "\tvalidate: can be used to test credentials. This action requires <client> and <secret> params.\r\n";
+    echo "\tread: get decrypted data for creds.ini.\r\n";
+}

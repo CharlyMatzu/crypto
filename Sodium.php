@@ -76,29 +76,16 @@ class Sodium
 
 
     /**
-     * @return string
-     * @throws Exception
-     */
-    public function generateKeypair(){
-        $key = random_bytes( SODIUM_CRYPTO_SECRETBOX_KEYBYTES );
-        $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
-
-        $this->writeFile( "key", $key );
-        $this->writeFile( "nonce", $nonce );
-
-        return "New KeyPair created on secret/";
-    }
-
-    /**
      * @param $file String Path and file name
      * @param $data String data to put
      * @throws Exception
      */
     private function writeFile($file, $data){
-        if( !file_exists( "secret/".$file ) )
+        //TODO: specify folder to create
+        if( !file_exists( $file ) )
             mkdir( "secret" );
 
-        if( !file_put_contents( "secret/".$file, $data) )
+        if( !file_put_contents( $file, $data) )
             throw new Exception("Error to write file $file");
     }
 
@@ -108,10 +95,10 @@ class Sodium
      * @throws Exception
      */
     private function readFile($file){
-        if( !file_exists( "secret/".$file ) )
+        if( !file_exists( $file ) )
             throw new Exception("File $file does not exist");
 
-        $read = file_get_contents( "secret/".$file );
+        $read = file_get_contents( $file );
         if( !$read )
             throw new Exception("Error to read file $file");
 
@@ -134,6 +121,21 @@ class Sodium
 //            throw new Exception('Invalid signature');
 //        }
 //    }
+
+
+    /**
+     * @return string
+     * @throws Exception
+     */
+    private function generateKeypair(){
+        $key = random_bytes( SODIUM_CRYPTO_SECRETBOX_KEYBYTES );
+        $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
+
+        $this->writeFile( "key", $key );
+        $this->writeFile( "nonce", $nonce );
+
+        return "New KeyPair created on secret/";
+    }
 
 
     /**
@@ -160,45 +162,76 @@ class Sodium
     public function decrypt($ciphertext){
 //        $this->verify( $ciphertext );
 
-        $plaintext = sodium_crypto_secretbox_open($ciphertext,
-                                                $this->readFile( "nonce" ),
-                                                $this->readFile( "key" ) );
+        $plaintext = sodium_crypto_secretbox_open(
+            $ciphertext,
+            $this->readFile( "secret/nonce" ),
+            $this->readFile( "secret/key" )
+        );
+
         if ($plaintext === false) {
             throw new Exception("Bad ciphertext");
         }
         return $plaintext;
     }
 
-    //-------------------
-    // TEST
-    //-------------------
-
     /**
-     * @param $user String
-     * @param $pass String
+     * @return string decrypted text
      * @throws Exception
      */
-    public function newLogin($user, $pass){
-        $result = [ "user" => $user, "pass" => $pass ];
-        $this->writeFile( "data.ini", $this->encrypt( json_encode($result) ) );
+    public function getCreds( ){
+        $ciphertext = $this->readFile( "secret/creds.ini" );
+        return $this->decrypt( $ciphertext );
     }
 
     /**
-     * @param $user String
-     * @param $pass String
+     * @param $client String
+     * @param $secret String
      * @return bool
      * @throws Exception
      */
-    public function validate($user, $pass){
-        $result = $this->readFile( "data.ini" );
+    public function validate($client, $secret){
+        $result = $this->readFile( "secret/creds.ini" );
         $data = $this->decrypt( $result );
         $data = json_decode( $data );
 
-        if( $data->user === $user && $data->pass === $pass )
+        if( $data->client === $client && $data->pass === $secret )
             return true;
         else
             return false;
     }
+
+
+
+    /**
+     * @param $client String
+     * @param $secret String
+     * @throws Exception
+     */
+    public function newAccess($client, $secret){
+        //generate keys
+        $this->generateKeypair();
+
+        //define access
+        $uid = sha1( $uid = uniqid() );
+        $result = [ "client" => $client, "secret" => $secret, "uid" => $uid ];
+        $this->writeFile( "secret/creds.ini", $this->encrypt( json_encode($result) ) );
+        $this->writeFile( "secret/plain.txt", json_encode($result)."\r\n SAVE THIS FILE IN A SECURE DIRECTORY" );
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function generateCreds() {
+        $client = $this->randHash();
+        $secret = $this->randHash();
+        $this->newAccess( $client, $secret );
+    }
+
+    private function randHash( $len = 32 ){
+        return substr( md5(openssl_random_pseudo_bytes(20)), -$len);
+    }
+
+
 
 
 }
