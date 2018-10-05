@@ -1,4 +1,8 @@
 <?php
+/**
+ * @author Carlos R. Zuñiga <carlosrozuma@gmail.com>
+ * @link https://github.com/CharlyRonin/crypto
+ */
 
 require_once "Sodium.php";
 error_reporting( E_ERROR );
