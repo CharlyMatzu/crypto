@@ -14,6 +14,8 @@ class Sodium
     private $alice_kp;
     private $alice_sk;
     private $alice_pk;
+    const DS = DIRECTORY_SEPARATOR;
+    const SECRET_PATH = __DIR__ . self::DS . "secret" . self::DS;
 
     /**
      * Sodium constructor.
@@ -131,8 +133,8 @@ class Sodium
         $key = random_bytes( SODIUM_CRYPTO_SECRETBOX_KEYBYTES );
         $nonce = random_bytes(SODIUM_CRYPTO_SECRETBOX_NONCEBYTES);
 
-        $this->writeFile( "key", $key );
-        $this->writeFile( "nonce", $nonce );
+        $this->writeFile( self::SECRET_PATH . "key", $key );
+        $this->writeFile( self::SECRET_PATH . "nonce", $nonce );
 
         return "New KeyPair created on secret/";
     }
@@ -147,8 +149,8 @@ class Sodium
      */
     public function encrypt($message){
         $ciphertext = sodium_crypto_secretbox($message,
-                                            $this->readFile( "nonce" ),
-                                            $this->readFile( "key" ) );
+                                            $this->readFile( self::SECRET_PATH . "nonce" ),
+                                            $this->readFile( self::SECRET_PATH . "key" ) );
         return $ciphertext;
     }
 
@@ -164,8 +166,8 @@ class Sodium
 
         $plaintext = sodium_crypto_secretbox_open(
             $ciphertext,
-            $this->readFile( "secret/nonce" ),
-            $this->readFile( "secret/key" )
+            $this->readFile( self::SECRET_PATH . "nonce" ),
+            $this->readFile( self::SECRET_PATH . "key" )
         );
 
         if ($plaintext === false) {
@@ -179,7 +181,7 @@ class Sodium
      * @throws Exception
      */
     public function getCreds( ){
-        $ciphertext = $this->readFile( "secret/creds.ini" );
+        $ciphertext = $this->readFile( self::SECRET_PATH . "creds.ini" );
         return $this->decrypt( $ciphertext );
     }
 
@@ -190,11 +192,11 @@ class Sodium
      * @throws Exception
      */
     public function validate($client, $secret){
-        $result = $this->readFile( "secret/creds.ini" );
+        $result = $this->readFile( self::SECRET_PATH . "creds.ini" );
         $data = $this->decrypt( $result );
-        $data = json_decode( $data );
+        $data = json_decode( $data, true );
 
-        if( $data->client === $client && $data->pass === $secret )
+        if( $data['client'] === $client && $data['secret'] === $secret )
             return true;
         else
             return false;
@@ -214,8 +216,8 @@ class Sodium
         //define access
         $uid = sha1( $uid = uniqid() );
         $result = [ "client" => $client, "secret" => $secret, "uid" => $uid ];
-        $this->writeFile( "secret/creds.ini", $this->encrypt( json_encode($result) ) );
-        $this->writeFile( "secret/plain.txt", json_encode($result)."\r\n SAVE THIS FILE IN A SECURE DIRECTORY" );
+        $this->writeFile( self::SECRET_PATH . "creds.ini", $this->encrypt( json_encode($result) ) );
+        $this->writeFile( self::SECRET_PATH . "plain.txt", json_encode($result)."\r\n SAVE THIS FILE IN A SECURE DIRECTORY" );
     }
 
     /**
@@ -223,10 +225,32 @@ class Sodium
      */
     public function generateCreds() {
         $client = $this->randHash();
-        $secret = $this->randHash();
+//        $secret = $this->randHash();
+        $secret = $this->randNumberHash();
+
         $this->newAccess( $client, $secret );
     }
 
+
+    /**
+     * @return string generated numeric hash
+     */
+    private function randNumberHash(){
+        $val = "";
+        try{
+            for( $i = 0; $i < 32; $i++ )
+                $val .= '' . random_int( 0, 9 );
+        }catch (Exception $e) {
+            echo "An Exception has ocurred";
+            die();
+        }
+        return $val;
+    }
+
+    /**
+     * @param int $len
+     * @return bool|string
+     */
     private function randHash( $len = 32 ){
         return substr( md5(openssl_random_pseudo_bytes(20)), -$len);
     }

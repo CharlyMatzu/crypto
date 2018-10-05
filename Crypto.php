@@ -5,12 +5,15 @@ error_reporting( E_ERROR );
 
 //PARAMS
 $action = $argv[1];
-$client   = $argv[2];
+$client = $argv[2];
 $secret = $argv[3];
 
 
-if( empty($action) )
-    echo "Action Empty";
+if( empty($action) ) {
+    echo "Empty action. ";
+    printHelp();
+    exit;
+}
 
 // Dentitions
 try{
@@ -20,7 +23,7 @@ try{
         //TODO: use a specific key/creds files
         case 'validate': validate( $client, $secret ); break;
         case 'read': readCreds(); break;
-
+        case 'help': printHelp(); break;
 
         default: 
                 echo "$action is an invalid action\r\n";
@@ -98,9 +101,11 @@ function logger($message){
 
 
 function printHelp(){
+    global $argv;
+    echo "An action flag is required --- ".$argv[0]." <action>\r\n";
     echo "<action> value can be:\r\n";
-    echo "\tgen_access: generate new credentials automatically\r\n";
-    echo "\tnew_access: establish new credentials using specific access data. This action requires <client> and <secret> params.\r\n";
+    echo "\tgen_access: generates new credentials automatically\r\n";
+    echo "\tnew_access: establishes new credentials using specific access data. This action requires <client> and <secret> params.\r\n";
     echo "\tvalidate: can be used to test credentials. This action requires <client> and <secret> params.\r\n";
-    echo "\tread: get decrypted data for creds.ini.\r\n";
+    echo "\tread: get decrypted data.  creds.ini, nonce and key are required into /secret directory\r\n";
 }
